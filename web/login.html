@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light dark">
+<title>Anmelden · SpeedNAS</title>
+<link rel="icon" href="/static/icons/favicon.png" sizes="64x64">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card">
+    <div class="logo"><img src="/static/icons/icon-192.png" alt="SpeedNAS"></div>
+    <h1 id="title">Anmelden</h1>
+    <p class="lead" id="lead">Zugang zu deinem Netzwerkspeicher</p>
+
+    <div id="error" class="auth-error" hidden></div>
+
+    <form id="form" autocomplete="on">
+      <div class="field">
+        <label for="user">Benutzername</label>
+        <input class="input" id="user" name="username" autocomplete="username"
+               autocapitalize="none" autocorrect="off" required>
+      </div>
+      <div class="field">
+        <label for="pass">Passwort</label>
+        <input class="input" id="pass" name="password" type="password"
+               autocomplete="current-password" required>
+      </div>
+      <div class="field" id="pass2-field" hidden>
+        <label for="pass2">Passwort wiederholen</label>
+        <input class="input" id="pass2" type="password" autocomplete="new-password">
+      </div>
+      <button class="btn btn-primary" type="submit" id="submit">Anmelden</button>
+    </form>
+
+    <div class="auth-foot">SpeedNAS {{VERSION}}</div>
+  </div>
+</div>
+<script type="module" src="/static/js/login.js"></script>
+</body>
+</html>

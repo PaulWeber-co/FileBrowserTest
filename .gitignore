@@ -1,0 +1,17 @@
+# Bauergebnisse
+/dist/
+/speednas
+/speednas.exe
+
+# lokale Laufzeitdaten
+/config.json
+/state.json
+/thumbs/
+/uploads/
+*.tmp
+
+# Werkzeuge
+.DS_Store
+*.test
+*.out
+/node_modules/

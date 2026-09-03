@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="de">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#ffffff">
+<meta name="color-scheme" content="light dark">
+<meta name="description" content="SpeedNAS - Dateibrowser für Netzwerkspeicher">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="SpeedNAS">
+<title>SpeedNAS</title>
+<link rel="icon" href="/static/icons/favicon.png" sizes="64x64">
+<link rel="apple-touch-icon" href="/static/icons/apple-touch-icon.png">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+
+<div class="app">
+  <!-- ------------------------------------------------------- Seitenleiste -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-head">
+      <span class="brand">
+        <img src="/static/icons/icon-192.png" alt="" width="24" height="24">
+        SpeedNAS
+      </span>
+    </div>
+
+    <div class="sidebar-scroll">
+      <div class="nav-group">
+        <div class="nav-group-head">Speicherorte</div>
+        <div id="nav-locations"></div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Lesezeichen</div>
+        <div id="nav-favorites"></div>
+      </div>
+
+      <div class="nav-group">
+        <div class="nav-group-head">Zuletzt besucht</div>
+        <div id="nav-recent"></div>
+      </div>
+    </div>
+
+    <div class="sidebar-foot">
+      <div style="flex:1;min-width:0" id="storage"></div>
+      <button class="btn btn-icon" id="btn-theme" title="Design wechseln"></button>
+      <button class="btn btn-icon" id="user-btn" data-icon="users" title="Konto"></button>
+    </div>
+  </aside>
+
+  <!-- -------------------------------------------------------- Hauptteil -->
+  <main class="main">
+    <div class="topbar">
+      <button class="btn btn-icon mobile-only" id="btn-menu" data-icon="menu" title="Menü"></button>
+      <nav class="crumbs" id="crumbs" aria-label="Pfad"></nav>
+      <div class="search-box" id="search-box">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"
+             stroke-linecap="round" aria-hidden="true">
+          <path d="M11 18.5a7.5 7.5 0 1 0 0-15 7.5 7.5 0 0 0 0 15Z"/><path d="m20.5 20.5-4.2-4.2"/>
+        </svg>
+        <input class="input" id="search-input" type="search" placeholder="Suchen …"
+               aria-label="Im aktuellen Ordner suchen" autocomplete="off" enterkeyhint="search">
+        <button class="clear" id="search-clear" data-icon="close" data-icon-size="15" title="Suche löschen"></button>
+      </div>
+    </div>
+
+    <div class="toolbar" id="toolbar">
+      <div id="normal-actions" style="display:flex;gap:6px;align-items:center">
+        <button class="btn btn-icon" id="btn-up" data-icon="arrowUp" title="Eine Ebene hoch (Rückschritt)"></button>
+        <button class="btn btn-icon" id="btn-refresh" data-icon="refresh" title="Aktualisieren (F5)"></button>
+        <div class="divider"></div>
+        <button class="btn" id="btn-newfolder" data-icon="folderPlus" data-icon-size="17">
+          <span class="desktop-only">Neuer Ordner</span>
+        </button>
+        <button class="btn" id="btn-upload" data-icon="upload" data-icon-size="17">
+          <span class="desktop-only">Hochladen</span>
+        </button>
+        <button class="btn desktop-only" id="btn-upload-dir" data-icon="folder" data-icon-size="17">
+          Ordner hochladen
+        </button>
+      </div>
+
+      <div id="sel-actions" style="display:none;gap:6px;align-items:center">
+        <button class="btn btn-icon" id="btn-clear-sel" data-icon="close" title="Auswahl aufheben"></button>
+        <span class="selection-info" id="sel-info"></span>
+        <div class="divider"></div>
+        <button class="btn" id="btn-download" data-icon="download" data-icon-size="17">
+          <span class="desktop-only">Herunterladen</span>
+        </button>
+        <button class="btn btn-danger" id="btn-delete" data-icon="trash" data-icon-size="17">
+          <span class="desktop-only">Löschen</span>
+        </button>
+      </div>
+
+      <div class="spacer"></div>
+      <button class="btn btn-icon" id="btn-view" title="Ansicht wechseln"></button>
+      <button class="btn btn-icon" id="btn-more" data-icon="more" title="Weitere Aktionen"></button>
+      <button class="btn btn-icon desktop-only" id="btn-settings" data-icon="settings" title="Einstellungen"></button>
+    </div>
+
+    <div style="position:relative;flex:1;min-height:0;display:flex;flex-direction:column">
+      <div class="loading-bar" id="loading" style="display:none"><i></i></div>
+      <div class="content" id="content"></div>
+    </div>
+  </main>
+</div>
+
+<!-- ------------------------------------------------------- untere Leiste -->
+<nav class="mobile-bar" aria-label="Aktionen">
+  <button id="mb-places" data-icon="menu" data-icon-size="21">Orte</button>
+  <button id="mb-up" data-icon="arrowUp" data-icon-size="21">Hoch</button>
+  <button id="mb-upload" data-icon="upload" data-icon-size="21">Laden</button>
+  <button id="mb-search" data-icon="search" data-icon-size="21">Suchen</button>
+  <button id="mb-more" data-icon="settings" data-icon-size="21">Mehr</button>
+</nav>
+
+<div id="transfers" style="display:none"></div>
+
+<noscript>
+  <div style="padding:40px;text-align:center">
+    SpeedNAS braucht JavaScript. Bitte im Browser aktivieren.
+  </div>
+</noscript>
+
+<script type="module" src="/static/js/app.js"></script>
+</body>
+</html>
