@@ -131,6 +131,62 @@ Wie viel das im konkreten Fall bringt, misst der Geschwindigkeitstest unter
 **Einstellungen → Diagnose**. Alle Stellschrauben und was realistisch drin ist,
 stehen in [docs/performance.md](docs/performance.md).
 
+## Mit Docker (ein Befehl)
+
+Wer Docker hat, braucht weder Go noch eine Installation:
+
+```bash
+git clone https://github.com/PaulWeber-co/FileBrowserTest.git
+cd FileBrowserTest
+./start.sh
+```
+
+Unter Windows: `start.bat` doppelklicken.
+
+Das Skript nimmt dir alles ab – es prüft, ob Docker läuft, legt eine `.env`
+mit deiner Nutzerkennung an, baut das Image, startet den Container, wartet bis
+der Dienst antwortet und zeigt am Ende:
+
+```
+  ┌────────────────────────────────────────────────────────┐
+  │  SpeedNAS läuft                                        │
+  └────────────────────────────────────────────────────────┘
+
+   Am PC        http://localhost:8088
+   Am Handy     http://192.168.2.105:8088
+```
+
+Die zweite Adresse tippst du am Handy ein – fertig. (Ist `qrencode`
+installiert, zeigt das Skript zusätzlich einen QR-Code zum Abscannen.)
+
+Weitere Befehle:
+
+```bash
+./start.sh status                 # läuft es? unter welcher Adresse?
+./start.sh logs                   # zusehen
+./start.sh probe 192.168.2.1      # SMB-Version des Routers prüfen
+./start.sh adduser paul           # Benutzer anlegen
+./start.sh update                 # neu bauen und neu starten
+./start.sh stop                   # anhalten (Daten bleiben erhalten)
+./start.sh --slim                 # 15-MB-Image statt 100 MB
+```
+
+Konfiguration und Daten liegen im Volume `speednas-data` und überleben jedes
+Update des Containers. Der Container spricht den Router ganz normal an –
+ausgehende Verbindungen funktionieren im Standard-Netzmodus ohne Zutun.
+
+Zwei Bauvarianten stehen zur Wahl:
+
+| | `runtime` (Vorgabe) | `slim` (`--slim`) |
+|---|---|---|
+| Größe | ~100 MB | 15,2 MB |
+| Video- und HEIC-Vorschauen | ja | nein |
+| Shell im Container | ja | nein |
+
+**Neu bei Docker?** [docs/docker.md](docs/docker.md) erklärt das Ganze von
+Grund auf: Images und Container, das Dockerfile Zeile für Zeile, Volumes,
+Rechte, Netzwerk, Compose, Fehlersuche – mit Übungen und Spickzettel.
+
 ## Bauen
 
 Vorausgesetzt wird Go 1.24 oder neuer.
@@ -161,6 +217,11 @@ speednas -open                    Starten und Browser öffnen
 speednas -config pfad.json        Andere Konfigurationsdatei verwenden
 ```
 
+Alle wichtigen Schalter lassen sich auch über Umgebungsvariablen setzen –
+praktisch im Container: `SPEEDNAS_CONFIG`, `SPEEDNAS_DATA`, `SPEEDNAS_LISTEN`,
+`SPEEDNAS_TLS`, `SPEEDNAS_TLS_CERT`, `SPEEDNAS_TLS_KEY`, `SPEEDNAS_NO_AUTH`.
+Ein Schalter auf der Kommandozeile hat immer Vorrang.
+
 ## Weitere Dokumentation
 
 | Datei | Inhalt |
@@ -170,6 +231,7 @@ speednas -config pfad.json        Andere Konfigurationsdatei verwenden
 | [docs/performance.md](docs/performance.md) | VPN, USB 2.0, alle Stellschrauben, realistische Werte |
 | [docs/konfiguration.md](docs/konfiguration.md) | Alle Einstellungen der Konfigurationsdatei |
 | [docs/betrieb.md](docs/betrieb.md) | Autostart, HTTPS, Sicherheit, Fernzugriff |
+| [docs/docker.md](docs/docker.md) | Docker von Grund auf lernen – mit SpeedNAS als Beispiel |
 | [docs/entwicklung.md](docs/entwicklung.md) | Aufbau des Quelltexts, Tests |
 
 ## Sicherheitshinweise in Kürze
