@@ -69,6 +69,18 @@ func (m *Manager) build(l config.Location) (*vfs.Client, error) {
 
 	switch r.Type {
 	case "smb":
+		// SMB1 ist ein eigener Client, kein Dialekt von SMB2.
+		if vfs.IsSMB1Dialect(r.SMB.Dialect) {
+			return vfs.NewSMB1(r.ID, r.Label, r.Root, vfs.SMB1Options{
+				Host:     r.SMB.Host,
+				Port:     r.SMB.Port,
+				Share:    r.SMB.Share,
+				User:     r.SMB.User,
+				Password: r.SMB.Password,
+				Domain:   r.SMB.Domain,
+				PoolSize: r.PoolSize,
+			}, cacheTTL), nil
+		}
 		return vfs.NewSMB(r.ID, r.Label, r.Root, vfs.SMBOptions{
 			Host:        r.SMB.Host,
 			Port:        r.SMB.Port,

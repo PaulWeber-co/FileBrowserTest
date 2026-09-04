@@ -69,28 +69,38 @@ Der Router antwortet auf Port 445 nicht.
 
 ### „Der Server spricht ausschließlich SMB1"
 
-Das ist der häufigste Fall bei älteren Firmwareständen und die Erklärung
-dafür, dass der Windows-Explorer und die iOS-Dateien-App nichts mehr finden:
-beide haben SMB1 entfernt.
+Das ist der Normalfall beim Speedport 4 und die Erklärung dafür, dass der
+Windows-Explorer und die iOS-Dateien-App nichts mehr finden: beide haben
+SMB1 entfernt.
 
-Der Reihe nach:
+**SpeedNAS kann es.** Stelle den Speicherort auf SMB ein und wähle unter
+*Dialekt* ausdrücklich `SMB 1 (nur wenn der Router nichts anderes kann)`.
+Die Automatik wählt SMB1 nie von selbst – das ist Absicht.
+
+Alles funktioniert damit: Anzeigen, Lesen, Hochladen, Umbenennen, Löschen,
+ZIP-Download, Umlaute im Dateinamen, freier Speicherplatz. Nur das Setzen
+des Änderungsdatums kennt SMB1 nicht.
+
+**Aber:** SMB1 überträgt unverschlüsselt, und die Anmeldung ist schwächer
+als bei SMB2. Warum das im Detail so ist und was du tun solltest, steht in
+[smb1.md](smb1.md) – die Kurzfassung: im eigenen LAN vertretbar, Port 445
+niemals im Router weiterleiten, ein eigenes Passwort für die Freigabe.
+
+Besser ist SMB1 trotzdem nicht. Wenn möglich, in dieser Reihenfolge:
 
 1. **Firmware aktualisieren.** *Einstellungen → Firmware-Update*. Neuere
-   Stände bringen häufig SMB2 mit.
+   Stände bringen häufig SMB2 mit. Danach den Dialekt zurück auf
+   *automatisch* stellen.
 2. **Im Router nach einer SMB-Einstellung suchen.** Manche Modelle haben einen
    Schalter für die Protokollversion oder für „ältere Geräte unterstützen" –
    Letzterer schaltet SMB1 *zusätzlich* ein, nicht SMB2 aus.
 3. **FTP verwenden.** Bietet der Router eine FTP-Freigabe an, richte den
    Speicherort in SpeedNAS als *FTP* ein. FTP ist von der SMB-Version völlig
-   unabhängig und funktioniert auch dort, wo SMB1 die einzige Option wäre.
-4. **Am Router vorbei.** Wenn nichts davon geht, ist der ehrliche Rat: Die
-   USB-Freigabe eines Routers ist ohnehin die langsamste denkbare Variante.
-   Ein Raspberry Pi mit der Platte am USB-Anschluss, auf dem SpeedNAS direkt
-   läuft, ist schneller, sicherer und kostet wenig.
-
-SpeedNAS unterstützt SMB1 bewusst nicht. Das Protokoll gilt seit
-WannaCry/EternalBlue als nicht mehr vertretbar; es einzubauen hieße, die
-Lücke wieder aufzumachen, die Microsoft und Apple gerade geschlossen haben.
+   unabhängig – eine Alternative, wenn SMB zickt.
+4. **Am Router vorbei.** Die USB-Freigabe eines Routers ist ohnehin die
+   langsamste denkbare Variante. Ein Raspberry Pi mit der Platte am
+   USB-Anschluss, auf dem SpeedNAS direkt läuft, ist schneller, sicherer und
+   kostet wenig.
 
 ### „Anmeldung fehlgeschlagen"
 
@@ -127,7 +137,7 @@ Das ist ein eigenes Thema: [performance.md](performance.md).
   Signierung         aktiv=true erzwungen=false
   max. Leseblock     64 KiB      größte Leseanfrage, die der Server annimmt
   max. Schreibblock  64 KiB
-  SMB1               nein
+  SMB1               nein        ob der Server zusätzlich das alte SMB1 kann
 ```
 
 - **Antwortzeit** unter 2 ms heißt LAN, 5–20 ms heißt WLAN, darüber VPN oder

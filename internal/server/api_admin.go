@@ -239,8 +239,9 @@ func probeHints(p smbprobe.Result) []string {
 	case p.SMB1:
 		out = append(out, "Der Server spricht ausschließlich SMB1 ("+p.SMB1Dialect+").",
 			"Genau das ist der Grund, warum die iOS-Dateien-App und der Windows-Explorer nicht mehr verbinden: beide haben SMB1 entfernt.",
-			"SpeedNAS kann SMB1 ebenfalls nicht sprechen. Suche im Router nach einer Option für SMB2/SMB3 oder aktualisiere die Firmware.",
-			"Falls der Router FTP anbietet, richte den Speicherort alternativ als FTP ein - das funktioniert unabhängig von SMB.")
+			"SpeedNAS kann SMB1 - stelle die Protokollversion des Speicherorts dafür ausdrücklich auf \"SMB 1\".",
+			"Beachte dabei: SMB1 überträgt unverschlüsselt. Vertretbar ist das, weil SMB1 nur zwischen SpeedNAS und dem Router läuft und dein Netz nie verlässt - auch beim Zugriff von unterwegs. Hintergründe: docs/smb1.md.",
+			"Besser wäre, im Router SMB2 zu aktivieren oder die Firmware zu aktualisieren - falls das Gerät das hergibt.")
 	default:
 		out = append(out, "Port ist offen, aber es kam keine gültige SMB-Antwort. Läuft dort wirklich eine Dateifreigabe?")
 	}

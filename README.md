@@ -101,13 +101,23 @@ $ speednas -probe 192.168.2.1
   SMB1               ja - NT LM 0.12
 ```
 
-**Wichtig und ehrlich:** SpeedNAS spricht ebenfalls kein SMB1. Wenn der Router
-*ausschließlich* SMB1 kann, hilft nur, im Router SMB2 zu aktivieren bzw. die
-Firmware zu aktualisieren – oder den Speicher stattdessen per **FTP**
-einzubinden, das SpeedNAS ebenfalls beherrscht und das von der SMB-Version
-unabhängig ist.
+**SpeedNAS spricht SMB1.** Genau dafür bringt es einen eigenen SMB1-Client
+mit – der Grund, warum die Freigabe hier funktioniert und im Explorer nicht.
+Einzustellen unter *Einstellungen → Speicherort → SMB → Dialekt →
+`SMB 1`*; die Automatik verhandelt weiterhin ausschließlich SMB2/SMB3.
 
-Mehr dazu in [docs/speedport.md](docs/speedport.md).
+Zwei Dinge dazu ehrlich gesagt:
+
+- SMB1 überträgt **unverschlüsselt**. Vertretbar ist das, weil SMB1 bei
+  SpeedNAS das lokale Netz nie verlässt: Von unterwegs spricht dein Handy
+  HTTP durch den VPN-Tunnel mit SpeedNAS, und nur SpeedNAS spricht SMB1 mit
+  dem Router. Warum SMB1 als unsicher gilt und was du trotzdem tun solltest,
+  steht ausführlich in [docs/smb1.md](docs/smb1.md).
+- Falls der Router SMB2 kann, nimm SMB2. SMB1 ist die Notlösung für
+  Router, die nichts anderes anbieten – wie der Speedport 4.
+
+Mehr dazu in [docs/speedport.md](docs/speedport.md) und
+[docs/smb1.md](docs/smb1.md).
 
 ## Tempo, VPN und USB 2.0
 
@@ -227,6 +237,7 @@ Ein Schalter auf der Kommandozeile hat immer Vorrang.
 | Datei | Inhalt |
 |---|---|
 | [docs/speedport.md](docs/speedport.md) | Freigabe am Router einrichten, Fehlersuche, FTP als Ausweg |
+| [docs/smb1.md](docs/smb1.md) | SMB1: warum es unsicher ist, wann es trotzdem vertretbar ist |
 | [docs/iphone.md](docs/iphone.md) | iPhone, iPad und Android als App einrichten |
 | [docs/performance.md](docs/performance.md) | VPN, USB 2.0, alle Stellschrauben, realistische Werte |
 | [docs/konfiguration.md](docs/konfiguration.md) | Alle Einstellungen der Konfigurationsdatei |

@@ -273,8 +273,24 @@ function smbForm(host, loc, status) {
     { value: '2.1', label: 'SMB 2.1 erzwingen' },
     { value: '3.0', label: 'SMB 3.0 erzwingen' },
     { value: '3.1.1', label: 'SMB 3.1.1 erzwingen' },
+    { value: '1', label: 'SMB 1 (nur wenn der Router nichts anderes kann)' },
   ], { value: c.dialect || '' });
-  dialectSel.addEventListener('change', () => { c.dialect = dialectSel.value; });
+
+  // Warnung nur zeigen, wenn SMB1 tatsächlich gewählt ist.
+  const smb1Warnung = el('div', { class: 'notice warn', hidden: true },
+    el('strong', {}, 'SMB1 ist unverschlüsselt. '),
+    'Wer im selben Netz mitliest, sieht deine Dateien und Metadaten im Klartext, '
+    + 'und die Anmeldung ist schwächer als bei SMB2. '
+    + 'Vertretbar ist das hier, weil SMB1 nur zwischen SpeedNAS und dem Router läuft: '
+    + 'auch beim Zugriff von unterwegs verlässt es dein Netz nie. '
+    + 'Im eigenen, WPA2-gesicherten WLAN ist das in Ordnung.',
+    el('div', { style: 'margin-top:6px' },
+      'Nimm SMB1 nur, wenn die Diagnose zeigt, dass der Router nichts Besseres anbietet. '
+      + 'Die Hintergründe stehen in docs/smb1.md.'),
+  );
+  const zeigeWarnung = () => { smb1Warnung.hidden = dialectSel.value !== '1'; };
+  dialectSel.addEventListener('change', () => { c.dialect = dialectSel.value; zeigeWarnung(); });
+  zeigeWarnung();
 
   const discover = el('button', { class: 'btn btn-sm' }, icon('search', 15), 'Freigaben suchen');
   const shareRow = el('div', { style: 'display:flex;gap:8px;align-items:flex-start' },
@@ -325,6 +341,7 @@ function smbForm(host, loc, status) {
     ),
     field('Protokollversion', dialectSel,
       'Nur ändern, wenn die automatische Aushandlung Probleme macht.'),
+    smb1Warnung,
   );
 }
 
