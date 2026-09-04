@@ -85,7 +85,21 @@ LABEL org.opencontainers.image.title="SpeedNAS" \
 
 COPY --from=builder /out/speednas /usr/local/bin/speednas
 COPY docker-entrypoint.sh /usr/local/bin/docker-entrypoint.sh
-RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Zeilenenden bereinigen, bevor das Skript ausfuehrbar gemacht wird.
+#
+# Wurde das Repository unter Windows ausgecheckt, kann Git aus jedem "\n" ein
+# "\r\n" gemacht haben. Der Shebang lautet dann "#!/bin/sh\r", und der Kernel
+# sucht einen Interpreter namens "/bin/sh\r". Docker meldet daraufhin
+# "exec /usr/local/bin/docker-entrypoint.sh: no such file or directory" -
+# gemeint ist aber der Interpreter, nicht das Skript.
+#
+# .gitattributes verhindert das an der Wurzel; diese Zeile macht das Image
+# zusaetzlich unempfindlich, damit auch ein bereits schief ausgecheckter
+# Arbeitsordner ohne weiteres Zutun funktioniert.
+RUN tr -d '\r' < /usr/local/bin/docker-entrypoint.sh > /tmp/entrypoint && \
+    mv /tmp/entrypoint /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
 
 # Alles Veraenderliche liegt unter /data: Konfiguration, Sitzungen,
 # Vorschaubilder, angefangene Uploads.

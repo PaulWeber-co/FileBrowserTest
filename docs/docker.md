@@ -1191,6 +1191,66 @@ ls -la /usr/local/bin/
 ls -la /data
 ```
 
+### „exec …: no such file or directory" – obwohl die Datei da ist
+
+Die irreführendste Meldung, die Docker zu bieten hat:
+
+```
+speednas | exec /usr/local/bin/docker-entrypoint.sh: no such file or directory
+```
+
+Die Datei ist da. Gemeint ist der **Interpreter**.
+
+Wurde das Repository unter Windows ausgecheckt, hat Git aus jedem `\n` ein
+`\r\n` gemacht (`core.autocrlf=true` ist dort die Voreinstellung). Damit
+lautet die erste Zeile des Skripts nicht mehr `#!/bin/sh`, sondern
+`#!/bin/sh\r` – und ein Programm dieses Namens sucht der Kernel vergeblich.
+
+Nachstellen lässt sich das in drei Zeilen:
+
+```bash
+printf '#!/bin/sh\r\necho hallo\r\n' > /tmp/x.sh && chmod +x /tmp/x.sh
+/tmp/x.sh
+# bash: /tmp/x.sh: cannot execute: required file not found
+```
+
+Besonders tückisch: **Git Bash unter Windows verkraftet CRLF klaglos.** Die
+Skripte auf dem Wirt laufen also, und nur der Container fällt um – was den
+Verdacht in die völlig falsche Richtung lenkt.
+
+Drei Ebenen der Behebung, von der Wurzel aus:
+
+**1. `.gitattributes`** – verhindert es beim Auschecken, unabhängig von den
+Einstellungen des Benutzers:
+
+```
+*.sh            text eol=lf
+docker-entrypoint.sh text eol=lf
+*.bat           text eol=crlf
+*.ps1           text eol=crlf
+```
+
+**2. Im Dockerfile bereinigen** – damit auch ein bereits schief ausgecheckter
+Arbeitsordner ein brauchbares Image ergibt:
+
+```dockerfile
+RUN tr -d '\r' < /usr/local/bin/docker-entrypoint.sh > /tmp/entrypoint && \
+    mv /tmp/entrypoint /usr/local/bin/docker-entrypoint.sh && \
+    chmod +x /usr/local/bin/docker-entrypoint.sh
+```
+
+**3. Vorhandenen Arbeitsordner neu normalisieren** – nötig, weil
+`.gitattributes` bereits ausgecheckte Dateien nicht rückwirkend anfasst:
+
+```bash
+git rm --cached -r . && git reset --hard
+```
+
+Dieselbe Ursache steckt übrigens hinter `bad interpreter: No such file or
+directory` und `$'\r': command not found` – immer, wenn eine Meldung
+unerklärlich wirkt, lohnt ein Blick mit `file skript.sh` oder
+`head -1 skript.sh | od -c`.
+
 ### „Ich komme nicht auf den Dienst"
 
 Von innen nach außen prüfen:

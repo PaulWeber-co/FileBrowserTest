@@ -194,6 +194,76 @@ http_get() {
     fi
 }
 
+# Bekannte Fehlerbilder in den Container-Ausgaben erkennen und erklaeren.
+# Die Meldungen von Docker sind an genau diesen Stellen irrefuehrend.
+explain_failure() {
+    local logs="$1"
+
+    if printf '%s' "$logs" | grep -q "docker-entrypoint.sh: no such file or directory"; then
+        cat <<'HINT'
+
+   Diagnose: Das Startskript im Container hat Windows-Zeilenenden (CRLF).
+
+   Die Meldung meint nicht das Skript, sondern den Interpreter: Aus der ersten
+   Zeile "#!/bin/sh" wurde "#!/bin/sh\r", und ein Programm dieses Namens gibt
+   es nicht. Git wandelt unter Windows beim Auschecken standardmaessig um.
+
+   Behebung - neueste Fassung holen und neu bauen:
+
+       git pull
+       ./start.sh update
+
+   Das Dockerfile bereinigt die Zeilenenden inzwischen selbst.
+   Wer den Arbeitsordner zusaetzlich sauber ziehen will:
+
+       git rm --cached -r . >/dev/null && git reset --hard
+
+HINT
+        return 0
+    fi
+
+    if printf '%s' "$logs" | grep -qiE "permission denied|read-only file system"; then
+        cat <<'HINT'
+
+   Diagnose: Der Dienst darf nicht in sein Datenverzeichnis schreiben.
+
+   Meist gehoert ein eingebundener Ordner einem anderen Benutzer. Deine
+   Kennung findest du mit "id -u" und "id -g"; beides gehoert in die .env:
+
+       PUID=1000
+       PGID=1000
+
+HINT
+        return 0
+    fi
+
+    if printf '%s' "$logs" | grep -qiE "address already in use|port is already allocated"; then
+        cat <<HINT
+
+   Diagnose: Port ${PORT} ist bereits belegt.
+
+   Anderen Port nehmen:   ./start.sh --port 9000
+
+HINT
+        return 0
+    fi
+
+    if printf '%s' "$logs" | grep -q "exec format error"; then
+        cat <<'HINT'
+
+   Diagnose: Das Image passt nicht zur Architektur dieses Rechners.
+
+   Ein auf dem PC gebautes Image laeuft nicht auf einem Raspberry Pi und
+   umgekehrt. Auf dem Zielgeraet selbst bauen:
+
+       ./start.sh update
+
+HINT
+        return 0
+    fi
+    return 1
+}
+
 wait_healthy() {
     local url="http://127.0.0.1:${PORT}/health" i=0 max=90
     printf '   warte auf den Dienst '
@@ -214,7 +284,10 @@ wait_healthy() {
     done
     printf '\n'
     warn "Nach ${max}s keine Antwort. Ausgaben:"
-    "${DC[@]}" logs --tail 30 2>&1 | sed 's/^/     /'
+    local logs
+    logs="$("${DC[@]}" logs --tail 30 2>&1)"
+    printf '%s\n' "$logs" | sed 's/^/     /'
+    explain_failure "$logs" || true
     return 1
 }
 
