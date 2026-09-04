@@ -131,6 +131,34 @@ Wie viel das im konkreten Fall bringt, misst der Geschwindigkeitstest unter
 **Einstellungen → Diagnose**. Alle Stellschrauben und was realistisch drin ist,
 stehen in [docs/performance.md](docs/performance.md).
 
+## Mit Docker
+
+Wer Docker hat, braucht weder Go noch eine Installation:
+
+```bash
+git clone https://github.com/PaulWeber-co/FileBrowserTest.git
+cd FileBrowserTest
+docker compose up -d
+```
+
+Danach läuft SpeedNAS unter `http://<deine-ip>:8088` und startet nach einem
+Neustart des Rechners von selbst wieder. Konfiguration und Daten liegen im
+Volume `speednas-data` und überleben jedes Update des Containers.
+
+```bash
+docker compose logs -f                                      # zusehen
+docker compose exec speednas speednas -probe 192.168.2.1    # SMB prüfen
+docker compose down                                         # anhalten
+```
+
+Der Container spricht den Router ganz normal an – ausgehende Verbindungen
+funktionieren im Standard-Netzmodus ohne Zutun. Für den Raspberry Pi gibt es
+Multi-Arch-Bauten.
+
+**Neu bei Docker?** [docs/docker.md](docs/docker.md) erklärt das Ganze von
+Grund auf: Images und Container, das Dockerfile Zeile für Zeile, Volumes,
+Rechte, Netzwerk, Compose, Fehlersuche – mit Übungen und Spickzettel.
+
 ## Bauen
 
 Vorausgesetzt wird Go 1.24 oder neuer.
@@ -161,6 +189,11 @@ speednas -open                    Starten und Browser öffnen
 speednas -config pfad.json        Andere Konfigurationsdatei verwenden
 ```
 
+Alle wichtigen Schalter lassen sich auch über Umgebungsvariablen setzen –
+praktisch im Container: `SPEEDNAS_CONFIG`, `SPEEDNAS_DATA`, `SPEEDNAS_LISTEN`,
+`SPEEDNAS_TLS`, `SPEEDNAS_TLS_CERT`, `SPEEDNAS_TLS_KEY`, `SPEEDNAS_NO_AUTH`.
+Ein Schalter auf der Kommandozeile hat immer Vorrang.
+
 ## Weitere Dokumentation
 
 | Datei | Inhalt |
@@ -170,6 +203,7 @@ speednas -config pfad.json        Andere Konfigurationsdatei verwenden
 | [docs/performance.md](docs/performance.md) | VPN, USB 2.0, alle Stellschrauben, realistische Werte |
 | [docs/konfiguration.md](docs/konfiguration.md) | Alle Einstellungen der Konfigurationsdatei |
 | [docs/betrieb.md](docs/betrieb.md) | Autostart, HTTPS, Sicherheit, Fernzugriff |
+| [docs/docker.md](docs/docker.md) | Docker von Grund auf lernen – mit SpeedNAS als Beispiel |
 | [docs/entwicklung.md](docs/entwicklung.md) | Aufbau des Quelltexts, Tests |
 
 ## Sicherheitshinweise in Kürze

@@ -50,6 +50,17 @@ func main() {
 	flag.Usage = usage
 	flag.Parse()
 
+	// Umgebungsvariablen als Vorgabe, Schalter haben Vorrang. In einem
+	// Container ist das der uebliche Weg: dort gibt es keine Kommandozeile,
+	// die man mal eben anpasst, wohl aber environment:-Eintraege.
+	envDefault(cfgPath, "SPEEDNAS_CONFIG")
+	envDefault(listen, "SPEEDNAS_LISTEN")
+	envDefault(dataDir, "SPEEDNAS_DATA")
+	envDefault(certFile, "SPEEDNAS_TLS_CERT")
+	envDefault(keyFile, "SPEEDNAS_TLS_KEY")
+	envDefaultBool(useTLS, "SPEEDNAS_TLS")
+	envDefaultBool(noAuth, "SPEEDNAS_NO_AUTH")
+
 	if *showVer {
 		fmt.Printf("SpeedNAS %s (%s, %s/%s)\n", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 		return
@@ -129,6 +140,30 @@ func main() {
 	log.Printf("Auf Wiedersehen.")
 }
 
+// envDefault setzt einen Wert aus der Umgebung, sofern der Schalter leer blieb.
+func envDefault(target *string, name string) {
+	if *target == "" {
+		if v, ok := os.LookupEnv(name); ok {
+			*target = v
+		}
+	}
+}
+
+// envDefaultBool versteht 1, true, yes und on als "an".
+func envDefaultBool(target *bool, name string) {
+	if *target {
+		return
+	}
+	v, ok := os.LookupEnv(name)
+	if !ok {
+		return
+	}
+	switch strings.ToLower(strings.TrimSpace(v)) {
+	case "1", "true", "yes", "on":
+		*target = true
+	}
+}
+
 func usage() {
 	fmt.Fprintf(os.Stderr, `SpeedNAS %s - Dateibrowser für Netzwerkspeicher
 
@@ -141,6 +176,15 @@ Häufige Fälle:
   speednas -probe 192.168.2.1       Prüfen, welche SMB-Version der Router spricht
   speednas -tls -listen :8443       Mit HTTPS starten
   speednas -open                    Starten und Browser öffnen
+
+Umgebungsvariablen (werden von den Schaltern ueberstimmt):
+  SPEEDNAS_CONFIG      Pfad zur Konfigurationsdatei
+  SPEEDNAS_DATA        Datenverzeichnis
+  SPEEDNAS_LISTEN      Adresse und Port
+  SPEEDNAS_TLS         1 = HTTPS aktivieren
+  SPEEDNAS_TLS_CERT    Zertifikatsdatei
+  SPEEDNAS_TLS_KEY     Schluesseldatei
+  SPEEDNAS_NO_AUTH     1 = Anmeldung abschalten
 
 Optionen:
 `, version)

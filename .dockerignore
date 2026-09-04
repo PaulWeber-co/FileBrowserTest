@@ -1,0 +1,41 @@
+# Alles, was nicht in den Build-Kontext gehoert.
+#
+# Wichtig fuer Tempo UND Sicherheit: alles hier Aufgelistete wird gar nicht
+# erst an den Docker-Daemon geschickt. Ohne diese Datei wandern .git und dist
+# mit - das sind schnell hunderte Megabyte pro Build, und Zugangsdaten aus
+# einer lokalen config.json waeren im Image.
+
+.git
+.gitignore
+.github
+
+# Bauergebnisse - im Image wird ohnehin neu gebaut
+dist/
+speednas
+speednas.exe
+*.exe
+
+# lokale Laufzeitdaten (koennten Passwoerter enthalten!)
+config.json
+state.json
+thumbs/
+uploads/
+*.tmp
+
+# Dokumentation und Werkzeuge, die im Image nichts verloren haben
+docs/
+scripts/
+README.md
+LICENSE
+*.md
+
+# Editor- und Systemkram
+.vscode/
+.idea/
+.DS_Store
+node_modules/
+
+# Docker-Dateien selbst
+Dockerfile*
+docker-compose*.yml
+.dockerignore
