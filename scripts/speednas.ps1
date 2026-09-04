@@ -127,6 +127,47 @@ function Test-Health {
     } catch { return $false }
 }
 
+# Bekannte Fehlerbilder in den Container-Ausgaben erkennen und erklaeren.
+function Show-FailureHint {
+    param([string]$Logs)
+
+    if ($Logs -match 'docker-entrypoint\.sh: no such file or directory') {
+        Write-Host ''
+        Write-Host '   Diagnose: Das Startskript im Container hat Windows-Zeilenenden (CRLF).' -ForegroundColor Yellow
+        Write-Host ''
+        Write-Host '   Die Meldung meint nicht das Skript, sondern den Interpreter: Aus der'
+        Write-Host '   ersten Zeile "#!/bin/sh" wurde "#!/bin/sh`r", und ein Programm dieses'
+        Write-Host '   Namens gibt es nicht. Git wandelt unter Windows beim Auschecken um.'
+        Write-Host ''
+        Write-Host '   Behebung:'
+        Write-Host '       git pull'
+        Write-Host '       .\start.bat update'
+        Write-Host ''
+        return
+    }
+    if ($Logs -match 'permission denied|read-only file system') {
+        Write-Host ''
+        Write-Host '   Diagnose: Der Dienst darf nicht in sein Datenverzeichnis schreiben.' -ForegroundColor Yellow
+        Write-Host '   Pruefe PUID und PGID in der .env-Datei.'
+        Write-Host ''
+        return
+    }
+    if ($Logs -match 'address already in use|port is already allocated') {
+        Write-Host ''
+        Write-Host "   Diagnose: Port $Port ist bereits belegt." -ForegroundColor Yellow
+        Write-Host '   Anderen Port nehmen:   .\start.bat -Port 9000'
+        Write-Host ''
+        return
+    }
+    if ($Logs -match 'exec format error') {
+        Write-Host ''
+        Write-Host '   Diagnose: Das Image passt nicht zur Architektur dieses Rechners.' -ForegroundColor Yellow
+        Write-Host '   Auf dem Zielgeraet selbst bauen:   .\start.bat update'
+        Write-Host ''
+        return
+    }
+}
+
 function Wait-Healthy {
     Write-Host '   warte auf den Dienst ' -NoNewline
     for ($i = 0; $i -lt 90; $i++) {
@@ -139,7 +180,9 @@ function Wait-Healthy {
     }
     Write-Host ''
     Write-Warn 'Nach 90s keine Antwort. Letzte Ausgaben:'
-    docker compose logs --tail 30
+    $logs = (docker compose logs --tail 30 2>&1 | Out-String)
+    Write-Host $logs
+    Show-FailureHint $logs
     return $false
 }
 

@@ -1,0 +1,38 @@
+# Zeilenenden verbindlich festlegen.
+#
+# Ohne diese Datei wandelt Git unter Windows beim Auschecken LF in CRLF um
+# (core.autocrlf=true ist dort die Voreinstellung). Fuer ein Shell-Skript ist
+# das fatal: aus "#!/bin/sh" wird "#!/bin/sh\r", und der Linux-Kernel im
+# Container sucht dann ein Programm namens "/bin/sh\r". Die Fehlermeldung
+# lautet irrefuehrenderweise:
+#
+#     exec /usr/local/bin/docker-entrypoint.sh: no such file or directory
+#
+# Gemeint ist nicht das Skript, sondern der Interpreter.
+#
+# Git Bash unter Windows verkraftet CRLF uebrigens klaglos - deshalb laufen
+# die Skripte auf dem Wirt, und nur der Container faellt um.
+
+# Standard: Git normalisiert Textdateien im Repository auf LF.
+* text=auto
+
+# Alles, was in einem Linux-Container ausgefuehrt wird, braucht zwingend LF.
+*.sh            text eol=lf
+docker-entrypoint.sh text eol=lf
+Dockerfile      text eol=lf
+*.yml           text eol=lf
+*.yaml          text eol=lf
+.env.example    text eol=lf
+
+# Windows-Skripte umgekehrt.
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+*.ps1           text eol=crlf
+
+# Binaerdateien nie anfassen.
+*.png           binary
+*.jpg           binary
+*.ico           binary
+*.exe           binary
+*.gz            binary
+*.zip           binary
