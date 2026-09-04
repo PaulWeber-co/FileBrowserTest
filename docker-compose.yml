@@ -15,7 +15,9 @@ services:
     # Entweder selbst bauen ...
     build:
       context: .
-      target: runtime          # "slim" waere die Variante ohne ffmpeg
+      # runtime = mit ffmpeg (Video- und HEIC-Vorschauen)
+      # slim    = minimal, ohne ffmpeg
+      target: ${SPEEDNAS_TARGET:-runtime}
       args:
         VERSION: "1.0.0"
     # ... oder ein fertiges Image verwenden. Dann die vier Zeilen oben
@@ -33,7 +35,7 @@ services:
       # links der Port auf deinem Rechner, rechts der im Container.
       # Steht dort "8088:8088", ist SpeedNAS unter http://<deine-ip>:8088
       # erreichbar. Willst du nur lokal ran: "127.0.0.1:8088:8088".
-      - "8088:8088"
+      - "${SPEEDNAS_PORT:-8088}:8088"
 
     volumes:
       # Alles Veraenderliche liegt im benannten Volume "speednas-data".
@@ -50,9 +52,11 @@ services:
       # - /srv/medien:/medien:ro
 
     environment:
-      TZ: Europe/Berlin        # sonst laufen alle Zeitangaben auf UTC
-      PUID: 1000               # Kennung, unter der der Dienst laeuft
-      PGID: 1000
+      # Diese Werte kommen aus der .env-Datei daneben (start.sh legt sie an).
+      # Hinter dem :- steht jeweils die Vorgabe, falls nichts gesetzt ist.
+      TZ: ${TZ:-Europe/Berlin}       # sonst laufen alle Zeitangaben auf UTC
+      PUID: ${PUID:-1000}            # Kennung, unter der der Dienst laeuft
+      PGID: ${PGID:-1000}
       SPEEDNAS_LISTEN: ":8088"
 
       # Passwoerter gehoeren nicht in die Konfigurationsdatei. SpeedNAS

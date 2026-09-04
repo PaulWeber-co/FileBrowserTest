@@ -8,9 +8,12 @@ package main
 import (
 	"bufio"
 	"context"
+	"crypto/tls"
 	"flag"
 	"fmt"
 	"log"
+	"net"
+	"net/http"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -18,6 +21,12 @@ import (
 	"strings"
 	"syscall"
 	"time"
+
+	// Zeitzonendatenbank ins Programm einbetten (rund 450 KB). Ohne das
+	// laeuft die Uhr in einem Container ohne /usr/share/zoneinfo - etwa auf
+	// Basis "scratch" - stillschweigend auf UTC, und alle Zeitstempel in der
+	// Oberflaeche sind um ein bis zwei Stunden verschoben.
+	_ "time/tzdata"
 
 	"golang.org/x/term"
 
@@ -45,6 +54,7 @@ func main() {
 		noAuth   = flag.Bool("no-auth", false, "Anmeldung abschalten (nur für abgeschottete Netze)")
 		open     = flag.Bool("open", false, "Browser nach dem Start öffnen")
 		devWeb   = flag.String("dev-web", "", "Oberfläche aus diesem Verzeichnis laden statt aus dem Binary")
+		health   = flag.Bool("health", false, "Selbsttest: prüft den eigenen /health-Endpunkt und beendet sich mit 0 oder 1")
 		showVer  = flag.Bool("version", false, "Version ausgeben")
 	)
 	flag.Usage = usage
@@ -64,6 +74,9 @@ func main() {
 	if *showVer {
 		fmt.Printf("SpeedNAS %s (%s, %s/%s)\n", version, runtime.Version(), runtime.GOOS, runtime.GOARCH)
 		return
+	}
+	if *health {
+		os.Exit(runHealthCheck(*listen, *useTLS || *certFile != ""))
 	}
 	if *probe != "" {
 		runProbe(*probe)
@@ -138,6 +151,53 @@ func main() {
 		log.Fatalf("Server beendet: %v", err)
 	}
 	log.Printf("Auf Wiedersehen.")
+}
+
+// runHealthCheck fragt den eigenen /health-Endpunkt ab und liefert den
+// Rückgabewert für Docker: 0 heißt gesund.
+//
+// Warum überhaupt eingebaut? Im "slim"-Image auf Basis scratch gibt es weder
+// wget noch curl noch eine Shell - das Programm muss sich also selbst prüfen
+// können, sonst gäbe es dort keinen Healthcheck.
+func runHealthCheck(listen string, useTLS bool) int {
+	host, port, err := net.SplitHostPort(strings.TrimSpace(listen))
+	if err != nil {
+		// Nur ein Port angegeben, etwa "8088"
+		host, port = "", strings.TrimSpace(strings.TrimPrefix(listen, ":"))
+	}
+	// Auf 0.0.0.0 oder :: kann man nicht verbinden - das sind Lausch-, keine
+	// Zieladressen.
+	switch host {
+	case "", "0.0.0.0", "::", "[::]":
+		host = "127.0.0.1"
+	}
+	if port == "" {
+		port = "8088"
+	}
+
+	scheme := "http"
+	client := &http.Client{Timeout: 4 * time.Second}
+	if useTLS {
+		scheme = "https"
+		// Das selbstsignierte Zertifikat prüfen zu wollen, wäre hier sinnlos:
+		// Wir reden mit uns selbst über die Loopback-Adresse.
+		client.Transport = &http.Transport{
+			TLSClientConfig: &tls.Config{InsecureSkipVerify: true},
+		}
+	}
+
+	url := fmt.Sprintf("%s://%s/health", scheme, net.JoinHostPort(host, port))
+	resp, err := client.Get(url)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "nicht erreichbar: %v\n", err)
+		return 1
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		fmt.Fprintf(os.Stderr, "unerwarteter Status %d\n", resp.StatusCode)
+		return 1
+	}
+	return 0
 }
 
 // envDefault setzt einen Wert aus der Umgebung, sofern der Schalter leer blieb.

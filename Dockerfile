@@ -54,6 +54,11 @@ RUN --mount=type=cache,target=/go/pkg/mod \
     go build -trimpath -ldflags "-s -w -X main.version=${VERSION}" \
     -o /out/speednas ./cmd/speednas
 
+# Ein leeres Verzeichnis mit der richtigen Kennung vorbereiten. In "scratch"
+# gibt es kein RUN und damit kein chown - der Umweg ueber COPY --chown ist der
+# einzige Weg, dort ein beschreibbares /data zu bekommen.
+RUN mkdir -p /emptydata
+
 # ---------------------------------------------------------------- Stufe 2 --
 # Alpine statt scratch, weil ffmpeg gebraucht wird: damit entstehen Vorschauen
 # fuer Videos und fuer HEIC-Fotos vom iPhone. Wer darauf verzichten kann,
@@ -108,27 +113,47 @@ ENTRYPOINT ["/usr/local/bin/docker-entrypoint.sh"]
 CMD ["speednas"]
 
 # ------------------------------------------------------- Stufe 2, Variante --
-# Ohne ffmpeg und ohne Paketverwaltung: kleinstmoeglich und mit der
-# geringsten Angriffsflaeche. Bauen mit:
+# Die kleinste mögliche Variante: "scratch" ist ein vollkommen leeres Image.
+# Kein Betriebssystem, keine Shell, keine Paketverwaltung - nur das Programm.
+#
+#   Vorteil:   ~15 MB statt ~100 MB, und praktisch keine Angriffsflaeche.
+#              Es gibt schlicht nichts, was verwundbar sein koennte.
+#   Nachteil:  ohne ffmpeg keine Vorschauen fuer Videos und HEIC-Fotos, und
+#              "docker exec ... sh" geht nicht (es gibt keine Shell).
+#
+# Moeglich ist das nur, weil das Programm mit CGO_ENABLED=0 statisch gebunden
+# ist und die Zeitzonendatenbank im Programm steckt.
+#
 #   docker build --target slim -t speednas:slim .
-FROM alpine:3.21 AS slim
+FROM scratch AS slim
 
-RUN apk add --no-cache ca-certificates tzdata && \
-    addgroup -g 1000 speednas && \
-    adduser -D -u 1000 -G speednas -h /data speednas && \
-    mkdir -p /data && chown speednas:speednas /data
+# Ohne diese Datei schlaegt jede HTTPS-Verbindung fehl (WebDAV, Freigabelinks).
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 
-COPY --from=builder /out/speednas /usr/local/bin/speednas
+# Leeres, dem Dienstbenutzer gehoerendes /data. Docker uebernimmt Besitzer und
+# Rechte dieses Verzeichnisses beim Anlegen eines benannten Volumes - nur
+# deshalb darf der unprivilegierte Prozess spaeter hineinschreiben.
+COPY --from=builder --chown=1000:1000 /emptydata /data
+
+COPY --from=builder /out/speednas /speednas
+
+LABEL org.opencontainers.image.title="SpeedNAS (slim)" \
+      org.opencontainers.image.description="Dateibrowser fuer Netzwerkspeicher, minimales Image" \
+      org.opencontainers.image.source="https://github.com/PaulWeber-co/FileBrowserTest" \
+      org.opencontainers.image.licenses="MIT"
 
 ENV SPEEDNAS_CONFIG=/data/config.json \
     SPEEDNAS_DATA=/data \
     SPEEDNAS_LISTEN=:8088 \
-    HEALTH_URL=http://127.0.0.1:8088/health \
     TZ=Europe/Berlin
 
-USER speednas
+# Rein numerisch, weil es in scratch keine /etc/passwd gibt.
+USER 1000:1000
 VOLUME ["/data"]
 EXPOSE 8088
+
+# Kein wget vorhanden - deshalb prueft das Programm sich selbst.
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-    CMD wget -q -O /dev/null "$HEALTH_URL" || exit 1
-ENTRYPOINT ["speednas"]
+    CMD ["/speednas", "-health"]
+
+ENTRYPOINT ["/speednas"]

@@ -131,29 +131,57 @@ Wie viel das im konkreten Fall bringt, misst der Geschwindigkeitstest unter
 **Einstellungen → Diagnose**. Alle Stellschrauben und was realistisch drin ist,
 stehen in [docs/performance.md](docs/performance.md).
 
-## Mit Docker
+## Mit Docker (ein Befehl)
 
 Wer Docker hat, braucht weder Go noch eine Installation:
 
 ```bash
 git clone https://github.com/PaulWeber-co/FileBrowserTest.git
 cd FileBrowserTest
-docker compose up -d
+./start.sh
 ```
 
-Danach läuft SpeedNAS unter `http://<deine-ip>:8088` und startet nach einem
-Neustart des Rechners von selbst wieder. Konfiguration und Daten liegen im
-Volume `speednas-data` und überleben jedes Update des Containers.
+Unter Windows: `start.bat` doppelklicken.
+
+Das Skript nimmt dir alles ab – es prüft, ob Docker läuft, legt eine `.env`
+mit deiner Nutzerkennung an, baut das Image, startet den Container, wartet bis
+der Dienst antwortet und zeigt am Ende:
+
+```
+  ┌────────────────────────────────────────────────────────┐
+  │  SpeedNAS läuft                                        │
+  └────────────────────────────────────────────────────────┘
+
+   Am PC        http://localhost:8088
+   Am Handy     http://192.168.2.105:8088
+```
+
+Die zweite Adresse tippst du am Handy ein – fertig. (Ist `qrencode`
+installiert, zeigt das Skript zusätzlich einen QR-Code zum Abscannen.)
+
+Weitere Befehle:
 
 ```bash
-docker compose logs -f                                      # zusehen
-docker compose exec speednas speednas -probe 192.168.2.1    # SMB prüfen
-docker compose down                                         # anhalten
+./start.sh status                 # läuft es? unter welcher Adresse?
+./start.sh logs                   # zusehen
+./start.sh probe 192.168.2.1      # SMB-Version des Routers prüfen
+./start.sh adduser paul           # Benutzer anlegen
+./start.sh update                 # neu bauen und neu starten
+./start.sh stop                   # anhalten (Daten bleiben erhalten)
+./start.sh --slim                 # 15-MB-Image statt 100 MB
 ```
 
-Der Container spricht den Router ganz normal an – ausgehende Verbindungen
-funktionieren im Standard-Netzmodus ohne Zutun. Für den Raspberry Pi gibt es
-Multi-Arch-Bauten.
+Konfiguration und Daten liegen im Volume `speednas-data` und überleben jedes
+Update des Containers. Der Container spricht den Router ganz normal an –
+ausgehende Verbindungen funktionieren im Standard-Netzmodus ohne Zutun.
+
+Zwei Bauvarianten stehen zur Wahl:
+
+| | `runtime` (Vorgabe) | `slim` (`--slim`) |
+|---|---|---|
+| Größe | ~100 MB | 15,2 MB |
+| Video- und HEIC-Vorschauen | ja | nein |
+| Shell im Container | ja | nein |
 
 **Neu bei Docker?** [docs/docker.md](docs/docker.md) erklärt das Ganze von
 Grund auf: Images und Container, das Dockerfile Zeile für Zeile, Volumes,

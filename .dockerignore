@@ -15,7 +15,10 @@ speednas
 speednas.exe
 *.exe
 
-# lokale Laufzeitdaten (koennten Passwoerter enthalten!)
+# lokale Laufzeitdaten und Zugangsdaten - duerfen NIE in den Build-Kontext
+.env
+.env.*
+!.env.example
 config.json
 state.json
 thumbs/
@@ -25,6 +28,8 @@ uploads/
 # Dokumentation und Werkzeuge, die im Image nichts verloren haben
 docs/
 scripts/
+start.sh
+start.bat
 README.md
 LICENSE
 *.md

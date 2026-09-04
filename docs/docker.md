@@ -29,6 +29,36 @@ für eine Datenbank, einen Webserver oder dein nächstes Projekt.
 
 ---
 
+## Der schnelle Weg (falls du erst mal loslegen willst)
+
+Alles darunter erklärt, *warum* es funktioniert. Wenn es nur laufen soll:
+
+```bash
+git clone https://github.com/PaulWeber-co/FileBrowserTest.git
+cd FileBrowserTest
+./start.sh                 # Windows: start.bat doppelklicken
+```
+
+Das Skript prüft, ob Docker läuft, legt eine `.env` mit deiner Nutzerkennung
+an, baut das Image, startet den Container, wartet bis der Dienst antwortet –
+und zeigt dann die Adresse, die du am Handy eintippst.
+
+Weitere Befehle:
+
+```bash
+./start.sh status                    # läuft es? unter welcher Adresse?
+./start.sh logs                      # zusehen
+./start.sh probe 192.168.2.1         # SMB-Version des Routers prüfen
+./start.sh adduser paul              # Benutzer anlegen
+./start.sh update                    # nach Codeänderung neu bauen
+./start.sh stop                      # anhalten (Daten bleiben)
+./start.sh reset                     # alles löschen (fragt nach)
+./start.sh --slim                    # 15-MB-Image statt 100 MB
+./start.sh --port 9000               # anderer Port
+```
+
+---
+
 ## 1. Warum überhaupt Container
 
 Du kennst das Problem, auch wenn du es noch nie so genannt hast: Ein Programm
@@ -669,7 +699,8 @@ ENTRYPOINT ["speednas"]
 mit, alles andere bleibt zurück.
 
 **Ergebnis: aus fast 1 GB werden rund 100 MB** – der größte Posten darin ist
-ffmpeg. Mit dem `slim`-Ziel ohne ffmpeg sind es etwa 20 MB.
+ffmpeg. Das `slim`-Ziel geht noch weiter und baut auf `scratch` auf, einem
+buchstäblich leeren Image: gemessen **15,2 MB**.
 
 Verlass dich nicht auf meine Zahlen, miss selbst:
 
@@ -697,12 +728,69 @@ Unser Dockerfile hat zwei End-Stufen. Mit `--target` wählst du aus:
 
 ```bash
 docker build -t speednas:local .                  # Standard: mit ffmpeg
-docker build --target slim -t speednas:slim .     # ohne ffmpeg, ~20 MB
+docker build --target slim -t speednas:slim .     # scratch, 15 MB
 ```
 
-Der Unterschied in der Praxis: Ohne ffmpeg gibt es keine Vorschaubilder für
-Videos und keine für HEIC-Fotos vom iPhone. Für normale JPEGs und PNGs
-brauchst du es nicht.
+Der Unterschied in der Praxis:
+
+| | `runtime` (Vorgabe) | `slim` |
+|---|---|---|
+| Grundlage | `alpine:3.21` | `scratch` (leer) |
+| Größe | ~100 MB | 15,2 MB |
+| Video-/HEIC-Vorschauen | ja (ffmpeg) | nein |
+| `docker exec … sh` | ja | nein, es gibt keine Shell |
+| Angriffsfläche | ein kleines Linux | nur das Programm |
+
+### Warum in `scratch` überhaupt etwas läuft
+
+`FROM scratch` ist ein Image ohne jeden Inhalt – kein Betriebssystem, keine
+Bibliotheken, keine Shell. Dass SpeedNAS darin startet, hat drei
+Voraussetzungen, und jede davon ist eine eigene kleine Lektion:
+
+**1. Statisch gebundenes Programm.** `CGO_ENABLED=0` – sonst sucht das
+Programm eine `libc`, die es dort nicht gibt.
+
+**2. Zertifikate.** Ohne `/etc/ssl/certs/ca-certificates.crt` schlägt jede
+HTTPS-Verbindung fehl. Sie kommen aus der Bau-Stufe:
+
+```dockerfile
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+```
+
+**3. Zeitzonen.** Ohne `/usr/share/zoneinfo` fällt Go stillschweigend auf UTC
+zurück, und alle Zeitstempel wären ein bis zwei Stunden falsch. Statt die
+Dateien mitzuschleppen, bettet SpeedNAS die Datenbank ins Programm ein – eine
+einzige Zeile in `main.go`:
+
+```go
+import _ "time/tzdata"
+```
+
+Dazu zwei Kniffe, die man leicht übersieht:
+
+**Ein beschreibbares `/data` ohne `RUN`.** In `scratch` gibt es kein `RUN`,
+also auch kein `chown`. Docker übernimmt beim Anlegen eines benannten Volumes
+aber Besitzer und Rechte des Verzeichnisses aus dem Image. Also legt die
+Bau-Stufe ein leeres Verzeichnis an, und `COPY` bringt es mit der richtigen
+Kennung herüber:
+
+```dockerfile
+COPY --from=builder --chown=1000:1000 /emptydata /data
+USER 1000:1000
+```
+
+Rein numerisch, denn eine `/etc/passwd` gibt es dort auch nicht.
+
+**Ein Healthcheck ohne wget.** Der übliche `wget`-Aufruf geht mangels Shell
+und Werkzeugen nicht. Deshalb prüft das Programm sich selbst:
+
+```dockerfile
+HEALTHCHECK CMD ["/speednas", "-health"]
+```
+
+`speednas -health` fragt den eigenen `/health`-Endpunkt ab und beendet sich
+mit 0 oder 1. Das ist ein Muster, das sich lohnt zu kennen – jedes Programm,
+das in ein minimales Image soll, braucht so etwas.
 
 ---
 
