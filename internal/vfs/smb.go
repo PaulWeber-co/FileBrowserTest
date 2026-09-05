@@ -37,6 +37,16 @@ func (o *SMBOptions) addr() string {
 	return net.JoinHostPort(o.Host, fmt.Sprint(port))
 }
 
+// IsSMB1Dialect meldet, ob die Angabe das alte SMB1 meint. Das ist ein
+// eigener Client, kein SMB2-Dialekt - deshalb die getrennte Prüfung.
+func IsSMB1Dialect(s string) bool {
+	switch strings.TrimSpace(strings.ToLower(s)) {
+	case "1", "1.0", "smb1", "nt1", "ntlm", "nt lm 0.12":
+		return true
+	}
+	return false
+}
+
 // DialectCode übersetzt eine Dialektangabe in den SMB2-Zahlencode.
 // 0 bedeutet: automatisch aushandeln.
 func DialectCode(s string) uint16 {

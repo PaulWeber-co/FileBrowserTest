@@ -37,7 +37,15 @@ func (a *App) handleLocations(w http.ResponseWriter, r *http.Request, id Identit
 		// Fähigkeiten stehen ohne Verbindungsaufbau fest, weil sie am
 		// Protokoll hängen. So bleibt die Seitenleiste sofort da.
 		switch l.Type {
-		case "smb", "sftp", "local":
+		case "smb":
+			if l.SMB != nil && vfs.IsSMB1Dialect(l.SMB.Dialect) {
+				// SMB1 kennt kein rekursives Löschen und kein Setzen der
+				// Zeitstempel; beides blendet die Oberfläche dann aus.
+				d.Caps = vfs.Caps{RandomRead: true, Rename: true, SpaceInfo: true}
+			} else {
+				d.Caps = vfs.Caps{RandomRead: true, Rename: true, Recursive: true, SetModTime: true, SpaceInfo: true}
+			}
+		case "sftp", "local":
 			d.Caps = vfs.Caps{RandomRead: true, Rename: true, Recursive: true, SetModTime: true, SpaceInfo: true}
 		case "webdav":
 			d.Caps = vfs.Caps{RandomRead: true, Rename: true, ServerCopy: true, Recursive: true}
